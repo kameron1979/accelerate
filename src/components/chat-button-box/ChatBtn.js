@@ -1,0 +1,84 @@
+import React, { useState } from "react";
+import { Form, Input } from "reactstrap";
+import socketIOClient from "socket.io-client";
+import Picker from "emoji-picker-react";
+
+import "./ChatBtn.css";
+
+function ChatBtn(props) {
+  const { setMessages, messages } = props;
+
+  const [messageInput, setMessageInput] = useState("");
+
+  const socket = socketIOClient("https://chat-app-server-linh.herokuapp.com");
+  const channelId = localStorage.getItem("channelId");
+  const user = localStorage.getItem("user");
+  const [emojiVisible, setEmojiVisible] = useState(false);
+
+  const onEmojiClick = (event, emojiObject) => {
+    setMessageInput((messageInput) => messageInput + emojiObject.emoji);
+  };
+
+  function onKeyUp(e) {
+    if (e.charCode === 13) onClickPostMessages();
+  }
+
+  function onClickPostMessages(e) {
+    const today = new Date();
+    const time = today.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+    const [month, date, year] = today.toLocaleDateString().split("/");
+    const present = `${time}, ${date}-${month}-${year}`;
+
+    const newMessage = {
+      content: messageInput,
+      time: present,
+      channelId,
+      user: JSON.parse(user)._id
+    };
+
+    console.log(newMessage);
+    socket.emit("send-message", newMessage);
+
+    setMessages(() => [...messages, newMessage]);
+
+    setMessageInput(() => "");
+  }
+
+  return (
+    <div className="message-input d-flex">
+      <Form className="w-100 position-relative" onKeyPress={onKeyUp}>
+        <Input
+          id="input"
+          value={messageInput}
+          onChange={(e) => setMessageInput(e.target.value)}
+          type="text"
+          placeholder="Enter Message..."
+        />
+        <div className="emoij-btn">
+          <span onClick={() => setEmojiVisible(() => !emojiVisible)}>
+            &#128512;
+          </span>
+          {emojiVisible && <Picker onEmojiClick={onEmojiClick} />}
+        </div>
+      </Form>
+      <div className="col-auto col align-self-center pr-0">
+        <button
+          onClick={onClickPostMessages}
+          type="button"
+          className="btn-rounded chat-send btn btn-primary"
+        >
+          <span className="mr-2">Send</span>
+          <img
+            src="https://cdn.glitch.com/af45ea57-cc17-431c-a29e-191393077cfe%2Ficons8-email-send-16.png?v=1596705546300"
+            alt=""
+          />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default ChatBtn;
